@@ -71,27 +71,23 @@ Invoke-WebRequest https://get.pnpm.io/install.ps1 -UseBasicParsing | Invoke-Expr
 ```
 
 ### Linux dependencies installer
-
 ```bash
-sudo npm install 
-curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-nvm install --lts
-nvm use --lts
-node -v
-npm uninstall -g pnpm
-npm install -g pnpm
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-rustup --version
-cargo --version
-rustc --version
+make install-depedencies
 ```
 
-Install and build the project:
+### Fix (Ubuntu / Debian / WSL)
+Install ALL required Tauri system dependencies in one go:
+```bash
+make fix-Wsl
+```
 
+### First installing
 ```bash
 pnpm install
 pnpm build
+```
+
+### After installing, clean & rebuild
+```bash
+make build
 ```
