@@ -15,13 +15,12 @@
     <a href="https://discord.gg/tdYzfDbSSW">Discord Server</a>
     ·
     <a href="https://www.encroissant.org/download">Download</a>
-    .
+    ·
     <a href="https://www.encroissant.org/docs">Explore the docs</a>
   </p>
 </div>
 
-En-Croissant is an open-source, cross-platform chess GUI that aims to be powerful, customizable and easy to use.
-
+En-Croissant is an open-source, cross-platform chess GUI that aims to be powerful, customizable, and easy to use.
 
 ## Features
 
@@ -46,7 +45,7 @@ pnpm install
 pnpm build
 ```
 
-The built app can be found at `src-tauri/target/release`
+The built app can be found at `src-tauri/target/release`.
 
 ## Donate
 
@@ -54,6 +53,45 @@ If you wish to support the development of this GUI, you can do so [here](https:/
 
 ## Contributing
 
-For contributing to this project please refer to the [Contributing guide](./CONTRIBUTING.md).
+For contributing to this project, please refer to the [Contributing guide](./CONTRIBUTING.md).
+
 ## License
-This software is licensed under GPL-3.0 License.
+
+This software is licensed under the GPL-3.0 License.
+
+## Dependencies
+
+Both are necessary.
+
+### pnpm Windows dependencies installer
+
+```bash
+# Install pnpm on Windows
+Invoke-WebRequest https://get.pnpm.io/install.ps1 -UseBasicParsing | Invoke-Expression
+```
+
+### Linux dependencies installer
+
+```bash
+sudo npm install 
+curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+nvm install --lts
+nvm use --lts
+node -v
+npm uninstall -g pnpm
+npm install -g pnpm
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+rustup --version
+cargo --version
+rustc --version
+```
+
+Install and build the project:
+
+```bash
+pnpm install
+pnpm build
+```
