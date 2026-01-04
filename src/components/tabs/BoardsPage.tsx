@@ -25,6 +25,7 @@ import "react-mosaic-component/react-mosaic-component.css";
 import "@/styles/react-mosaic.css";
 import { atomWithStorage } from "jotai/utils";
 import * as classes from "./BoardsPage.css";
+import CoachBoard from "../boards/coach/CoachBoard";
 
 export default function BoardsPage() {
   const { t } = useTranslation();
@@ -307,9 +308,10 @@ function TabSwitch({
           onChange={(currentNode) => setWindowsState({ currentNode })}
           resize={{ minimumPaneSizePercentage: 0 }}
         />
-        <BoardGame mode="coach" />
+        <CoachBoard />
       </TreeStateProvider>
     ))
+
     .with("play", () => (
       <TreeStateProvider id={tab.value}>
         <Mosaic<ViewId>

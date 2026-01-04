@@ -112,11 +112,13 @@ function OpponentForm({
   opponent,
   setOpponent,
   setOtherOpponent,
+  onEngineChange,
 }: {
   sameTimeControl: boolean;
   opponent: OpponentSettings;
   setOpponent: React.Dispatch<React.SetStateAction<OpponentSettings>>;
   setOtherOpponent: React.Dispatch<React.SetStateAction<OpponentSettings>>;
+  onEngineChange?: (engine: LocalEngine | null) => void;
 }) {
   function updateType(type: "engine" | "human") {
     if (type === "human") {
@@ -162,7 +164,10 @@ function OpponentForm({
       {opponent.type === "engine" && (
         <EnginesSelect
           engine={opponent.engine}
-          setEngine={(engine) => setOpponent((prev) => ({ ...prev, engine }))}
+          setEngine={(engine) => {
+            setOpponent((prev) => ({ ...prev, engine }));
+            onEngineChange?.(engine);
+          }}
         />
       )}
 
@@ -293,7 +298,15 @@ const DEFAULT_TIME_CONTROL: TimeControlField = {
   increment: 2_000,
 };
 
-function BoardGame({ mode = "play" }: { mode?: "play" | "coach" }) {
+function BoardGame({
+  mode = "play",
+  onHumanMove,
+  onEngineChange,
+}: {
+  mode?: "play" | "coach";
+  onHumanMove?: (move: Move, fen: string, moves: string[]) => void;
+  onEngineChange?: (engine: LocalEngine | null) => void;
+}) {
   useEffect(() => {
     if (mode === "coach") {
       setPlayer1Settings({
@@ -308,7 +321,6 @@ function BoardGame({ mode = "play" }: { mode?: "play" | "coach" }) {
       setInputColor("white");
     }
   }, [mode]);
-
   const activeTab = useAtomValue(activeTabAtom);
 
   const [inputColor, setInputColor] = useState<"white" | "random" | "black">(
@@ -398,7 +410,14 @@ function BoardGame({ mode = "play" }: { mode?: "play" | "coach" }) {
 
     // Coup humain 🎯
     moveSourceRef.current = null;
-    onHumanMove(lastMove);
+    console.log("onHumanMove :", onHumanMove);
+    if (onHumanMove) {
+      const move = lastNode.move;
+      console.log("Movment :", move);
+      if (!move) return;
+
+      onHumanMove(move, lastNode.fen, moves);
+    }
   }, [mainLine, mode]);
 
   const moves = useMemo(
@@ -506,16 +525,6 @@ function BoardGame({ mode = "play" }: { mode?: "play" | "coach" }) {
       unlisten.then((f) => f());
     };
   }, [activeTab, appendMove, pos, root.fen, moves, whiteTime, blackTime]);
-
-  function onHumanMove(moveUci: Move) {
-    if (mode !== "coach") return;
-
-    // TODO:
-    // 1. lancer analyse Stockfish
-    // 2. comparer eval avant / après
-    // 3. afficher feedback
-    console.log("Human played:", moveUci);
-  }
 
   const [sameTimeControl, setSameTimeControl] = useState(true);
 
@@ -733,6 +742,7 @@ function BoardGame({ mode = "play" }: { mode?: "play" | "coach" }) {
                       opponent={player2Settings}
                       setOpponent={setPlayer2Settings}
                       setOtherOpponent={setPlayer1Settings}
+                      onEngineChange={onEngineChange}
                     />
                   </Group>
                 </Box>
