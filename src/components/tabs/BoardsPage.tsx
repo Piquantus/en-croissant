@@ -68,7 +68,7 @@ export default function BoardsPage() {
         unwrap(await commands.killEngines(value));
       }
     },
-    [tabs, activeTab, setTabs, toggleSaveModal, setActiveTab],
+    [tabs, activeTab, setTabs, toggleSaveModal, setActiveTab]
   );
 
   function selectTab(index: number) {
@@ -100,10 +100,10 @@ export default function BoardsPage() {
             return { ...tab, name };
           }
           return tab;
-        }),
+        })
       );
     },
-    [setTabs],
+    [setTabs]
   );
 
   const duplicateTab = useCallback(
@@ -126,7 +126,7 @@ export default function BoardsPage() {
         setActiveTab(id);
       }
     },
-    [tabs, setTabs, setActiveTab],
+    [tabs, setTabs, setActiveTab]
   );
 
   const keyMap = useAtomValue(keyMapAtom);
@@ -299,6 +299,17 @@ function TabSwitch({
 
   return match(tab.type)
     .with("new", () => <NewTabHome id={tab.value} />)
+    .with("coach", () => (
+      <TreeStateProvider id={tab.value}>
+        <Mosaic<ViewId>
+          renderTile={(id) => fullLayout[id]}
+          value={windowsState.currentNode}
+          onChange={(currentNode) => setWindowsState({ currentNode })}
+          resize={{ minimumPaneSizePercentage: 0 }}
+        />
+        <BoardGame mode="coach" />
+      </TreeStateProvider>
+    ))
     .with("play", () => (
       <TreeStateProvider id={tab.value}>
         <Mosaic<ViewId>

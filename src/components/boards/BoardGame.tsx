@@ -33,7 +33,7 @@ import {
   IconPlus,
   IconZoomCheck,
 } from "@tabler/icons-react";
-import { parseUci } from "chessops";
+import { Move, parseUci } from "chessops";
 import { INITIAL_FEN } from "chessops/fen";
 import equal from "fast-deep-equal";
 import { useAtom, useAtomValue } from "jotai";
@@ -63,7 +63,7 @@ function EnginesSelect({
   setEngine: (engine: LocalEngine | null) => void;
 }) {
   const engines = useAtomValue(enginesAtom).filter(
-    (e): e is LocalEngine => e.type === "local",
+    (e): e is LocalEngine => e.type === "local"
   );
 
   useEffect(() => {
@@ -293,11 +293,26 @@ const DEFAULT_TIME_CONTROL: TimeControlField = {
   increment: 2_000,
 };
 
-function BoardGame() {
+function BoardGame({ mode = "play" }: { mode?: "play" | "coach" }) {
+  useEffect(() => {
+    if (mode === "coach") {
+      setPlayer1Settings({
+        type: "human",
+        name: "Player",
+      });
+      setPlayer2Settings({
+        type: "engine",
+        engine: null,
+        go: { t: "Depth", c: 10 },
+      });
+      setInputColor("white");
+    }
+  }, [mode]);
+
   const activeTab = useAtomValue(activeTabAtom);
 
   const [inputColor, setInputColor] = useState<"white" | "random" | "black">(
-    "white",
+    "white"
   );
   function cycleColor() {
     setInputColor((prev) =>
@@ -305,7 +320,7 @@ function BoardGame() {
         .with("white", () => "black" as const)
         .with("black", () => "random" as const)
         .with("random", () => "white" as const)
-        .exhaustive(),
+        .exhaustive()
     );
   }
 
@@ -346,19 +361,49 @@ function BoardGame() {
 
   const boardRef = useRef(null);
   const [gameState, setGameState] = useAtom(currentGameStateAtom);
+  const moveSourceRef = useRef<"human" | "engine" | null>(null);
+  const lastHandledMoveRef = useRef<Move | null>(null);
 
   function changeToAnalysisMode() {
     setTabs((prev) =>
       prev.map((tab) =>
-        tab.value === activeTab ? { ...tab, type: "analysis" } : tab,
-      ),
+        tab.value === activeTab ? { ...tab, type: "analysis" } : tab
+      )
     );
   }
   const mainLine = Array.from(treeIteratorMainLine(root));
   const lastNode = mainLine[mainLine.length - 1].node;
+
+  useEffect(() => {
+    if (mode !== "coach") return;
+    if (!mainLine.length) return;
+
+    const lastNode = mainLine[mainLine.length - 1].node;
+    const lastMove = lastNode.move;
+
+    if (!lastMove) return;
+
+    const uci = lastMove;
+
+    // 🔒 Déjà traité → on ignore
+    if (lastHandledMoveRef.current === uci) return;
+
+    lastHandledMoveRef.current = uci;
+
+    // Coup engine → on ignore
+    if (moveSourceRef.current === "engine") {
+      moveSourceRef.current = null;
+      return;
+    }
+
+    // Coup humain 🎯
+    moveSourceRef.current = null;
+    onHumanMove(lastMove);
+  }, [mainLine, mode]);
+
   const moves = useMemo(
     () => getMainLine(root, headers.variant === "Chess960"),
-    [root, headers],
+    [root, headers]
   );
 
   const [pos, error] = useMemo(() => {
@@ -407,7 +452,7 @@ function BoardGame() {
                 ...s,
                 value: s.value?.toString() ?? "",
               })),
-          },
+          }
         );
       }
     }
@@ -425,28 +470,6 @@ function BoardGame() {
   const [whiteTime, setWhiteTime] = useState<number | null>(null);
   const [blackTime, setBlackTime] = useState<number | null>(null);
 
-  useEffect(() => {
-    const unlisten = events.bestMovesPayload.listen(({ payload }) => {
-      const ev = payload.bestLines;
-      if (
-        payload.progress === 100 &&
-        payload.engine === pos?.turn &&
-        payload.tab === activeTab + pos.turn &&
-        payload.fen === root.fen &&
-        equal(payload.moves, moves) &&
-        !pos?.isEnd()
-      ) {
-        appendMove({
-          payload: parseUci(ev[0].uciMoves[0])!,
-          clock: (pos.turn === "white" ? whiteTime : blackTime) ?? undefined,
-        });
-      }
-    });
-    return () => {
-      unlisten.then((f) => f());
-    };
-  }, [activeTab, appendMove, pos, root.fen, moves, whiteTime, blackTime]);
-
   const movable = useMemo(() => {
     if (players.white.type === "human" && players.black.type === "human") {
       return "turn";
@@ -459,6 +482,40 @@ function BoardGame() {
     }
     return "none";
   }, [players]);
+
+  useEffect(() => {
+    const unlisten = events.bestMovesPayload.listen(({ payload }) => {
+      const ev = payload.bestLines;
+      if (
+        payload.progress === 100 &&
+        payload.engine === pos?.turn &&
+        payload.tab === activeTab + pos.turn &&
+        payload.fen === root.fen &&
+        equal(payload.moves, moves) &&
+        !pos?.isEnd()
+      ) {
+        moveSourceRef.current = "engine";
+
+        appendMove({
+          payload: parseUci(ev[0].uciMoves[0])!,
+          clock: (pos.turn === "white" ? whiteTime : blackTime) ?? undefined,
+        });
+      }
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [activeTab, appendMove, pos, root.fen, moves, whiteTime, blackTime]);
+
+  function onHumanMove(moveUci: Move) {
+    if (mode !== "coach") return;
+
+    // TODO:
+    // 1. lancer analyse Stockfish
+    // 2. comparer eval avant / après
+    // 3. afficher feedback
+    console.log("Human played:", moveUci);
+  }
 
   const [sameTimeControl, setSameTimeControl] = useState(true);
 
@@ -543,7 +600,9 @@ function BoardGame() {
         }
       } else {
         if (players.white.timeControl) {
-          newHeaders.white_time_control = `${players.white.timeControl.seconds / 1000}`;
+          newHeaders.white_time_control = `${
+            players.white.timeControl.seconds / 1000
+          }`;
           if (players.white.timeControl.increment) {
             newHeaders.white_time_control += `+${
               players.white.timeControl.increment / 1000
@@ -551,7 +610,9 @@ function BoardGame() {
           }
         }
         if (players.black.timeControl) {
-          newHeaders.black_time_control = `${players.black.timeControl.seconds / 1000}`;
+          newHeaders.black_time_control = `${
+            players.black.timeControl.seconds / 1000
+          }`;
           if (players.black.timeControl.increment) {
             newHeaders.black_time_control += `+${
               players.black.timeControl.increment / 1000
@@ -572,12 +633,12 @@ function BoardGame() {
         const whiteName =
           players.white.type === "human"
             ? players.white.name
-            : (players.white.engine?.name ?? "?");
+            : players.white.engine?.name ?? "?";
 
         const blackName =
           players.black.type === "human"
             ? players.black.name
-            : (players.black.engine?.name ?? "?");
+            : players.black.engine?.name ?? "?";
 
         return tab.value === activeTab
           ? {
@@ -585,7 +646,7 @@ function BoardGame() {
               name: `${whiteName} vs. ${blackName}`,
             }
           : tab;
-      }),
+      })
     );
   }
 
@@ -594,7 +655,7 @@ function BoardGame() {
       const intervalId = setInterval(decrementTime, 100);
       if (pos?.turn === "black" && whiteTime !== null) {
         setWhiteTime(
-          (prev) => prev! + (players.white.timeControl?.increment ?? 0),
+          (prev) => prev! + (players.white.timeControl?.increment ?? 0)
         );
       }
       if (pos?.turn === "white" && blackTime !== null) {
@@ -627,10 +688,10 @@ function BoardGame() {
           canTakeBack={onePlayerIsEngine}
           movable={movable}
           whiteTime={
-            gameState === "playing" ? (whiteTime ?? undefined) : undefined
+            gameState === "playing" ? whiteTime ?? undefined : undefined
           }
           blackTime={
-            gameState === "playing" ? (blackTime ?? undefined) : undefined
+            gameState === "playing" ? blackTime ?? undefined : undefined
           }
         />
       </Portal>

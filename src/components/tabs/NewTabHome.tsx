@@ -6,7 +6,12 @@ import { useAtom } from "jotai";
 import { useState } from "react";
 import ImportModal from "./ImportModal";
 
-import { IconChess, IconFileImport, IconPuzzle } from "@tabler/icons-react";
+import {
+  IconBrain,
+  IconChess,
+  IconFileImport,
+  IconPuzzle,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import Chessboard from "../icons/Chessboard";
 
@@ -17,6 +22,21 @@ export default function NewTabHome({ id }: { id: string }) {
   const [, setTabs] = useAtom(tabsAtom);
 
   const cards = [
+    {
+      icon: <IconBrain size={60} />,
+      title: t("Home.Card.AICoach.Title"),
+      description: t("Home.Card.AICoach.Desc"),
+      label: t("Home.Card.AICoach.Button"),
+      onClick: () => {
+        setTabs((prev: Tab[]) => {
+          const tab = prev.find((t) => t.value === id);
+          if (!tab) return prev;
+          tab.name = t("Home.Card.AICoach.Title");
+          tab.type = "coach";
+          return [...prev];
+        });
+      },
+    },
     {
       icon: <IconChess size={60} />,
       title: t("Home.Card.PlayChess.Title"),
