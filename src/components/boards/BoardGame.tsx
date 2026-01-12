@@ -302,10 +302,17 @@ function BoardGame({
   mode = "play",
   onHumanMove,
   onEngineChange,
+  onEngineAnalysis,
 }: {
   mode?: "play" | "coach";
   onHumanMove?: (move: Move, fen: string, moves: string[]) => void;
   onEngineChange?: (engine: LocalEngine | null) => void;
+  onEngineAnalysis?: (analysis: {
+    bestMove: string;
+    bestLine: string[];
+    fen: string;
+    side: "white" | "black";
+  }) => void;
 }) {
   useEffect(() => {
     if (mode === "coach") {
@@ -430,10 +437,12 @@ function BoardGame({
   }, [lastNode.fen]);
 
   useEffect(() => {
+    if (mode === "coach") return;
+
     if (pos?.isEnd()) {
       setGameState("gameOver");
     }
-  }, [pos, setGameState]);
+  }, [pos, setGameState, mode]);
 
   const [players, setPlayers] = useAtom(currentPlayersAtom);
 
@@ -514,7 +523,13 @@ function BoardGame({
         !pos?.isEnd()
       ) {
         moveSourceRef.current = "engine";
-
+        const bestMove = ev[0].uciMoves[0];
+        onEngineAnalysis?.({
+          bestMove,
+          bestLine: ev[0].uciMoves,
+          fen: payload.fen,
+          side: payload.engine,
+        });
         appendMove({
           payload: parseUci(ev[0].uciMoves[0])!,
           clock: (pos.turn === "white" ? whiteTime : blackTime) ?? undefined,

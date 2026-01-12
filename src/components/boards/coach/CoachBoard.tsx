@@ -1,72 +1,82 @@
-import { useRef, useState } from "react";
-import { makeUci, Move } from "chessops";
-import { commands } from "@/bindings";
-import type { LocalEngine } from "@/utils/engines";
+import { useState } from "react";
+import { Move, makeUci } from "chessops";
+import { type LocalEngine } from "@/utils/engines";
 import BoardGame from "../BoardGame";
+import { useSetAtom } from "jotai";
+import { coachFeedbackAtom } from "@/state/atoms";
 
 export default function CoachBoard() {
-  console.log("CoachBoard mounted");
-
+  const [engine, setEngine] = useState<LocalEngine | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [engine, setEngine] = useState<LocalEngine | null>(null); // ← stocke l’engine sélectionné
+  const [bestMove, setBestMove] = useState<string | null>(null);
+  const [bestLine, setBestLine] = useState<string[]>([]);
+  const setCoachFeedback = useSetAtom(coachFeedbackAtom);
 
-  // Callback pour quand l’humain joue un coup
-  async function onHumanMove(move: Move, fen: string, moves: string[]) {
+  // Quand l’humain joue un coup
+  async function handleHumanMove(move: Move, fen: string, moves: string[]) {
     if (!engine) {
       console.warn("Aucun moteur sélectionné, impossible de lancer Stockfish");
       return;
     }
 
     const uciMove = makeUci(move);
-
     console.log("Human played UCI:", uciMove);
-    console.log("FEN envoyée :", fen);
-    console.log("Moves envoyés :", moves);
+    console.log("FEN:", fen);
+    console.log("Moves so far:", moves);
 
-    const analysis = await commands.getBestMoves(
-      "black",
-      engine.path,
-      "coach-analysis",
-      { t: "Depth", c: 14 },
-      {
-        fen,
-        moves: [],
-        extraOptions: [],
-      }
-    );
-
-    // ✅ Gestion correcte du Result
-    if (analysis.status === "ok" && analysis.data) {
-      const [score, bestMoves] = analysis.data;
-      console.log("Best moves:", bestMoves, "Score:", score);
-
-      if (score < -1.5) {
-        setFeedback("❌ Mauvais coup — perte matérielle ou positionnelle");
-      } else if (score < -0.5) {
-        setFeedback("⚠️ Coup imprécis, il y avait mieux");
-      } else {
-        setFeedback("✅ Bon coup !");
-      }
-    } else if (analysis.status === "error") {
-      console.error("Erreur Stockfish:", analysis.error);
-      setFeedback(null); // pas de feedback si erreur
-    }
+    // Ici on pourrait directement appeler commands.getBestMoves
+    // si besoin, mais on récupère maintenant via onEngineAnalysis
+    setFeedback("Analyse en cours…");
   }
 
-  // Callback pour récupérer l’engine sélectionné depuis BoardGame
-  function handleEngineChange(engine: LocalEngine | null) {
-    setEngine(engine);
-    console.log("Engine sélectionné :", engine?.path);
+  // Quand Stockfish renvoie la meilleure ligne
+  function handleEngineAnalysis(payload: {
+    bestMove: string;
+    bestLine: string[];
+    fen: string;
+    side: "white" | "black";
+  }) {
+    console.log("Best move received:", payload.bestMove);
+    console.log("Best line:", payload.bestLine);
+
+    const [engineBestMove, secondBest] = payload.bestLine;
+
+    if (!engineBestMove) {
+      setCoachFeedback("🤔 Analyse incomplète");
+      return;
+    }
+
+    let feedback = "";
+
+    if (payload.bestMove === engineBestMove) {
+      feedback = "✅ Bon coup !";
+    } else {
+      feedback = `⚠️ Coup jouable, mais ${engineBestMove} était meilleur.`;
+    }
+
+    if (payload.bestLine.length > 1) {
+      feedback += `\nPlan typique : ${payload.bestLine
+        .slice(0, 4)
+        .join(" → ")}`;
+    }
+
+    setCoachFeedback(feedback);
+  }
+
+  // Quand l’utilisateur change le moteur
+  function handleEngineChange(selected: LocalEngine | null) {
+    setEngine(selected);
+    console.log("Engine sélectionné :", selected?.path);
   }
 
   return (
     <>
       <BoardGame
         mode="coach"
-        onHumanMove={onHumanMove}
-        onEngineChange={handleEngineChange} // ← remonte l’engine choisi
+        onHumanMove={handleHumanMove}
+        onEngineChange={handleEngineChange}
+        onEngineAnalysis={handleEngineAnalysis}
       />
-      {feedback && <div style={{ padding: 8 }}>{feedback}</div>}
     </>
   );
 }

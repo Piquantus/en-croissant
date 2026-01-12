@@ -36,8 +36,10 @@ import { useStore } from "zustand";
 import CompleteMoveCell from "./CompleteMoveCell";
 import * as styles from "./GameNotation.css";
 import OpeningName from "./OpeningName";
+import { coachFeedbackAtom } from "@/state/atoms";
 
 function GameNotation({ topBar }: { topBar?: boolean }) {
+  const coachFeedback = useAtomValue(coachFeedbackAtom);
   const store = useContext(TreeStateContext)!;
   const root = useStore(store, (s) => s.root);
   const currentFen = useStore(store, (s) => s.currentNode().fen);
@@ -95,6 +97,18 @@ function GameNotation({ topBar }: { topBar?: boolean }) {
                   zIndex={2}
                 />
               )}
+              {/* 🧠 COACH FEEDBACK */}
+              {coachFeedback && (
+                <Paper
+                  withBorder
+                  p="sm"
+                  mb="sm"
+                  radius="md"
+                  style={{ background: "var(--mantine-color-blue-light)" }}
+                >
+                  <Text size="sm">{coachFeedback}</Text>
+                </Paper>
+              )}
               {showComments && root.comment && (
                 <Comment comment={root.comment} />
               )}
@@ -117,8 +131,8 @@ function GameNotation({ topBar }: { topBar?: boolean }) {
                   {headers.result === "1/2-1/2"
                     ? "Draw"
                     : headers.result === "1-0"
-                      ? "White wins"
-                      : "Black wins"}
+                    ? "White wins"
+                    : "Black wins"}
                 </Text>
               </Text>
             )}
@@ -273,7 +287,7 @@ const RenderVariationTree = memo(
       equal(prev.path, next.path) &&
       equal(prev.start, next.start)
     );
-  },
+  }
 );
 
 function VariationCell({ moveNodes }: { moveNodes: React.ReactNode[] }) {
