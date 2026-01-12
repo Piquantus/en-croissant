@@ -35,11 +35,9 @@ export default function CoachBoard() {
     bestLine: string[];
     fen: string;
     side: "white" | "black";
+    humanMove: string;
   }) {
-    console.log("Best move received:", payload.bestMove);
-    console.log("Best line:", payload.bestLine);
-
-    const [engineBestMove, secondBest] = payload.bestLine;
+    const [engineBestMove] = payload.bestLine;
 
     if (!engineBestMove) {
       setCoachFeedback("🤔 Analyse incomplète");
@@ -48,16 +46,15 @@ export default function CoachBoard() {
 
     let feedback = "";
 
-    if (payload.bestMove === engineBestMove) {
-      feedback = "✅ Bon coup !";
+    if (payload.humanMove === engineBestMove) {
+      feedback = "✅ Excellent coup !";
     } else {
-      feedback = `⚠️ Coup jouable, mais ${engineBestMove} était meilleur.`;
+      feedback = `⚠️ Coup jouable, mais ${engineBestMove} était plus précis.`;
     }
 
     if (payload.bestLine.length > 1) {
-      feedback += `\nPlan typique : ${payload.bestLine
-        .slice(0, 4)
-        .join(" → ")}`;
+      feedback +=
+        "\nPlan typique : " + payload.bestLine.slice(0, 4).join(" → ");
     }
 
     setCoachFeedback(feedback);

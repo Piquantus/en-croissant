@@ -33,7 +33,7 @@ import {
   IconPlus,
   IconZoomCheck,
 } from "@tabler/icons-react";
-import { Move, parseUci } from "chessops";
+import { makeUci, Move, parseUci } from "chessops";
 import { INITIAL_FEN } from "chessops/fen";
 import equal from "fast-deep-equal";
 import { useAtom, useAtomValue } from "jotai";
@@ -312,8 +312,10 @@ function BoardGame({
     bestLine: string[];
     fen: string;
     side: "white" | "black";
+    humanMove: string;
   }) => void;
 }) {
+  const lastHumanMoveUciRef = useRef<string | null>(null);
   useEffect(() => {
     if (mode === "coach") {
       setPlayer1Settings({
@@ -422,6 +424,7 @@ function BoardGame({
       const move = lastNode.move;
       console.log("Movment :", move);
       if (!move) return;
+      lastHumanMoveUciRef.current = makeUci(move);
 
       onHumanMove(move, lastNode.fen, moves);
     }
@@ -529,6 +532,7 @@ function BoardGame({
           bestLine: ev[0].uciMoves,
           fen: payload.fen,
           side: payload.engine,
+          humanMove: lastHumanMoveUciRef.current!,
         });
         appendMove({
           payload: parseUci(ev[0].uciMoves[0])!,
