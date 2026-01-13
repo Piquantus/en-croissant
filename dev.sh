@@ -36,5 +36,5 @@ uvicorn gemma_server:app --reload --port 8000 &
 cd ../../
 
 # lancer Tauri
-pnpm start-vite
+# pnpm start-vite
 pnpm tauri dev
